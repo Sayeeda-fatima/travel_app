@@ -77,6 +77,9 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
+      - name: Run collectstatic
+        run: python manage.py collectstatic
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
