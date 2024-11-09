@@ -2,6 +2,10 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
 name: Build and deploy Python app to Azure Web App - travelappunique
 
 on:
@@ -20,7 +24,7 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.12' # Adjust the Python version as needed
 
       - name: Create and start virtual environment
         run: |
@@ -31,17 +35,29 @@ jobs:
         run: pip install -r requirements.txt
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      - name: Run tests
+        run: |
+          source venv/bin/activate
+          python manage.py test
+
+      - name: Execute Django migrations
+        run: |
+          source venv/bin/activate
+          python manage.py migrate --noinput
+
+      - name: Collect static files
+        run: |
+          source venv/bin/activate
+          python manage.py collectstatic --noinput -c
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        run: zip -r release.zip . -x "*venv*"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            release.zip
-            !venv/
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -50,7 +66,7 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write #This is required for requesting the JWT
+      id-token: write # This is required for requesting the JWT
 
     steps:
       - name: Download artifact from build job
@@ -61,7 +77,6 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -69,10 +84,11 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C3A2A46271FA4A81B31331CD60115F7E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C94C6D05BE974CD7AAC24E9F5DC854D1 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'travelappunique'
           slot-name: 'Production'
-          
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} # Ensure this secret is set in GitHub secrets
+          package: '.'
